@@ -32,17 +32,46 @@ const logSchema = new Schema({
   }]
 });
 
-const exercise = mongoose.model('Exercise', exerciseSchema);
-const user = mongoose.model('User', userSchema);
-const log_ = mongoose.model('Log', logSchema);
+const Exercise = mongoose.model('Exercise', exerciseSchema);
+const User = mongoose.model('User', userSchema);
+const Log = mongoose.model('Log', logSchema);
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html');
 });
 
+// Create a new user
+app.post('/api/users', (req, res) => {
+  let username = req.body.username;
+  if (!username) {
+    res.json({error: "Username required"});
+    return;
+  }
+  let newUser = new User({ username: req.body.username });
+  newUser.save((err, savedUser) => {
+    if (err) {
+      console.error(err);
+      res.json({error: "USER DID NOT SAVE"});
+    }
+    else {
+      console.log(savedUser);
+      res.json({
+        username: savedUser.username,
+        _id: savedUser._id
+      });
+    }
+  });
+});
 
+// Add exercises
+app.post('/api/users/:_id/exercises', (req, res) => {
+  
+});
 
+// GET user's exercise log
+app.get('/api/users/:_id/logs', (req, res) => {
 
+});
 
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log('Your app is listening on port ' + listener.address().port);
