@@ -11,15 +11,19 @@ app.use(express.static('public'));
 app.use(bodyParser.urlencoded({extended: "false"}));
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
 
-const exerciseSchema = new Schema({
+/*const exerciseSchema = new Schema({
   description: {type: String, required: true},
   duration: {type: Number, required: true},
   date: {type: Date, required: true}
-});
+});*/
 
 const userSchema = new Schema({
   username: {type: String, required: true},
-  exerciseLog: [exerciseSchema]
+  exerciseLog: [{
+    description: {type: String, required: true},
+    duration: {type: Number, required: true},
+    date: {type: Date, required: true}
+  }]
 });
 
 /*const logSchema = new Schema({
@@ -32,7 +36,7 @@ const userSchema = new Schema({
   }]
 });*/
 
-const Exercise = mongoose.model('Exercise', exerciseSchema);
+//const Exercise = mongoose.model('Exercise', exerciseSchema);
 const User = mongoose.model('User', userSchema);
 //const Log = mongoose.model('Log', logSchema);
 
@@ -131,16 +135,43 @@ app.post('/api/users/:_id/exercises', (req, res) => {
   Promise.all([checkDescription(req.body.description), checkDuration(req.body.duration), checkDate(req.body.date)])
     .then(values => {
       // Create Exercise
-
-      
-      res.json({
-        description: values[0],
-        duration: values[1],
-        date: values[2]
+      let userID = req.body[":_id"];
+      return new Promise((resolve, reject) => {
+        User.findById(userID, (err, userFound) => {
+          if (err) {
+            reject("findByID not successful");
+          }
+          else {
+            //console.log(values)
+            resolve([userFound, ...values]);
+          }
+        });
       });
-    }
-  )
-  .catch(err => res.send(`<h1>Error: ${err}</h1>`));
+    })
+    .then((values) => {
+      //console.log(values)
+      let [userFound, desc, dura, dat] = values;
+      userFound.exerciseLog.push({
+        description: desc,
+        duration: dura,
+        date: dat
+      });
+      userFound.save((err, savedUser) => {
+        if (err) {
+          throw new Error("Exercise failed to save");
+        }
+        else {
+          res.json({
+            _id: savedUser._id,
+            username: savedUser.username,
+            date: dat.toDateString(),
+            duration: dura,
+            description: desc
+          });
+        }
+      });
+    })
+    .catch(err => res.send(`<h1>Error: ${err}</h1>`));
 
   /*if (!description) {
     res.json({error: "Description required"});
