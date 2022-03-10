@@ -12,17 +12,17 @@ app.use(bodyParser.urlencoded({extended: "false"}));
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
 
 const exerciseSchema = new Schema({
-  username: {type: String, required: true},
   description: {type: String, required: true},
   duration: {type: Number, required: true},
-  date: {type: String, required: true}
+  date: {type: Date, required: true}
 });
 
 const userSchema = new Schema({
-  username: {type: String, required: true}
+  username: {type: String, required: true},
+  exerciseLog: [exerciseSchema]
 });
 
-const logSchema = new Schema({
+/*const logSchema = new Schema({
   username: {type: String, required: true},
   count: {type: Number, required: true},
   log: [{
@@ -30,11 +30,11 @@ const logSchema = new Schema({
     duration: {type: Number, required: true},
     date: {type: String, required: true}
   }]
-});
+});*/
 
 const Exercise = mongoose.model('Exercise', exerciseSchema);
 const User = mongoose.model('User', userSchema);
-const Log = mongoose.model('Log', logSchema);
+//const Log = mongoose.model('Log', logSchema);
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html');
@@ -42,7 +42,37 @@ app.get('/', (req, res) => {
 
 // Create a new user
 app.post('/api/users', (req, res) => {
-  let username = req.body.username;
+  Promise.resolve(req.body.username)
+    .then(value => {
+      return new Promise((resolve, reject) => {
+        if (!value) {
+          reject("Username required");
+        }
+        else {
+          let newUser = new User({ 
+            username: value,
+            exerciseLog: []
+          });
+          resolve(newUser);
+        }
+      });
+    })
+    .then(user => {
+      user.save((err, savedUser) => {
+        if (err) {
+          throw new Error("USER DID NOT SAVE");
+        }
+        else {
+          res.json({
+            username: savedUser.username,
+            _id: savedUser._id
+          });
+        }
+      });
+    })
+    .catch(err => res.send(`<h1>Error: ${err}</h1>`));
+
+  /*let username = req.body.username;
   if (!username) {
     res.json({error: "Username required"});
     return;
@@ -60,12 +90,72 @@ app.post('/api/users', (req, res) => {
         _id: savedUser._id
       });
     }
-  });
+  });*/
+});
+
+// When no ID is provided while creating an exercise
+app.post('/api/users//exercises', (req, res) => {
+  res.send("<h1>Error: ID required</h1>");
 });
 
 // Add exercises
 app.post('/api/users/:_id/exercises', (req, res) => {
-  
+  /*let id = req.body[":_id"];
+  let description = req.body.description;
+  let duration = req.body.duration;
+  let date = req.body.date;*/
+
+  const checkDescription = description => {
+    return new Promise((resolve, reject) => {
+      if (!description) reject("Description required");
+      else resolve(description);
+    });
+  };
+
+  const checkDuration = duration => {
+    return new Promise((resolve, reject) => {
+      if (!duration) reject("Duration required");
+      else if (!Number(duration)) reject("Duration should be a number");
+      else resolve(Number(duration));
+    });
+  };
+
+  const checkDate = date => {
+    return new Promise((resolve, reject) => {
+      if (!date) resolve(new Date());
+      else if (new Date(date).getDay()) resolve(new Date(date));
+      else reject("Invalid Date");
+    });
+  };
+
+  Promise.all([checkDescription(req.body.description), checkDuration(req.body.duration), checkDate(req.body.date)])
+    .then(values => {
+      // Create Exercise
+
+      
+      res.json({
+        description: values[0],
+        duration: values[1],
+        date: values[2]
+      });
+    }
+  )
+  .catch(err => res.send(`<h1>Error: ${err}</h1>`));
+
+  /*if (!description) {
+    res.json({error: "Description required"});
+    return;
+  }
+  else if (!duration) {
+    res.json({error: "Duration required"});
+    return;
+  }
+  else if (!Number(duration)) {
+    res.json({error: "Duration should be a number"});
+    return;
+  }*/
+  //duration = Number(duration);
+  //res.send("<h1>OK</h1>");
 });
 
 // GET user's exercise log
