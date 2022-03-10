@@ -44,8 +44,20 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html');
 });
 
-// Create a new user
-app.post('/api/users', (req, res) => {
+app.route('/api/users')
+  // GET all users
+  .get(async (req, res) => {
+    try {
+      let query = await User.find({}, '_id username __v');
+      res.json(query);
+    }
+    catch (err) {
+      console.error(err);
+      res.send("<h1>Error: Search query failed</h1>");
+    }
+  })
+  // Create a new user
+  .post((req, res) => {
   Promise.resolve(req.body.username)
     .then(value => {
       return new Promise((resolve, reject) => {
@@ -190,8 +202,12 @@ app.post('/api/users/:_id/exercises', (req, res) => {
 });
 
 // GET user's exercise log
-app.get('/api/users/:_id/logs', (req, res) => {
+app.get('/api/users/:_id/logs', async (req, res) => {
+  let {from, to, limit} = req.query;
 
+  console.log(req.query)
+  console.log(from, to, limit)
+  res.send(req.query)
 });
 
 const listener = app.listen(process.env.PORT || 3000, () => {
