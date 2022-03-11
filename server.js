@@ -137,7 +137,8 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
 
   try {
     console.log("--TRYING TO ADD EXERCISE...");
-    let checkedInputs = await Promise.all([checkID(req.body[':_id']), checkDescription(req.body.description), checkDuration(req.body.duration), checkDate(req.body.date)]);
+    console.log(`Inputs (ID, desc, dur, date): ${req.params._id}, ${req.body.description}, ${req.body.duration}, ${req.body.date}`);
+    let checkedInputs = await Promise.all([checkID(req.params._id), checkDescription(req.body.description), checkDuration(req.body.duration), checkDate(req.body.date)]);
     console.log(`User: ${checkedInputs[0]}`);
     console.log(`Description: ${checkedInputs[1]}`);
     console.log(`Duration: ${checkedInputs[2]}`);
@@ -155,6 +156,7 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
     console.log(`Updated User: ${updatedUser}`);
     console.log(`[Updated User === User] is [${updatedUser === checkedInputs[0]}]`);
 
+    console.log("ADD EXERCISE SUCCESS");
     res.json({
       _id: updatedUser._id,
       username: updatedUser.username,
@@ -164,6 +166,7 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
     });
   } 
   catch (err) {
+    console.error(err);
     res.send(`<h1>${err}</h1>`)
   }
   finally {
@@ -208,20 +211,22 @@ app.get('/api/users/:_id/logs', async (req, res) => {
         count: { $count: { } },
         log: { $push: "$exerciseLog" }
       })
-      .project({
+      /*.project({
         username: 1,
         from: req.query.from ? new Date(req.query.from).toDateString() : 0,
         to: req.query.to ? new Date(req.query.to).toDateString() : 0,
         count: 1,
         log: 1
-      })
+      })*/
       .exec();
     console.log(anAggregate);
 
     for (let i = 0; i < anAggregate[0].log.length; i++) {
       anAggregate[0].log[i].date = anAggregate[0].log[i].date.toDateString();
     }
-
+    if (req.query.from) anAggregate[0].from = new Date(req.query.from).toDateString();
+    if (req.query.to) anAggregate[0].to = new Date(req.query.from).toDateString();
+    
     console.log("AGGREGATION SUCCESS");
     res.json(anAggregate[0]);
   } 
